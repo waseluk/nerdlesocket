@@ -1,179 +1,178 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/styles.css">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/styles.css" />
     <title>Nerdle</title>
+  </head>
 
-    <head>
-        <header>
-            <nav class="navbar">
-                <div></div><img id="logo" src="./images/nerdle.svg" style="width: 211px; height: 70px;" />
-                <div class="new-word">
-                    <button type="submit" id="refresh" onclick="window.location.reload();">New word!</button>
-                </div>
-                <button id='btnCreate'>New Game</button>
-                <button id='btnJoin'>Join Game</button>
-                <input type='text' id='txtGameId'>
-            </nav>
-        </header>
-    </head>
+  <body>
+    <header>
+      <nav class="navbar">
+        <div></div>
+        <img
+          id="logo"
+          src="./images/nerdle.svg"
+          style="width: 211px; height: 70px"
+        />
+        <div class="new-word">
+          <button
+            type="submit"
+            id="refresh"
+            onclick="window.location.reload();"
+          >
+            New word!
+          </button>
+        </div>
+        <button id="btnCreate">New Game</button>
+        <button id="btnJoin">Join Game</button>
+        <input type="text" id="txtGameId" />
+      </nav>
+    </header>
 
-</head>
-<br> <br> <br> <br> <br>
-<div id='divPlayers'></div>
-<div id='drawBox'></div>
+    <br />
+    <br />
+    <br />
+    <br />
+    <br />
+    <div id="divPlayers"></div>
+    <div id="drawBox"></div>
 
-<body>
     <script>
-        //HTML elements
-        let clientId = null;
-        let gameId = null;
-        let playerColor = null;
+      //HTML elements
+      let clientId = null;
+      let gameId = null;
+      let playerColor = null;
 
-        let ws = new WebSocket("ws://localhost:9090")
-        const btnCreate = document.getElementById("btnCreate");
-        const btnJoin = document.getElementById("btnJoin");
-        const txtGameId = document.getElementById("txtGameId");
-        const divPlayers = document.getElementById("divPlayers");
-        // Not sure drawBox or Grid better?
-        const drawBox = document.getElementById("drawBox");
+      let ws = new WebSocket("ws://localhost:9090");
+      const btnCreate = document.getElementById("btnCreate");
+      const btnJoin = document.getElementById("btnJoin");
+      const txtGameId = document.getElementById("txtGameId");
+      const divPlayers = document.getElementById("divPlayers");
+      // Not sure drawBox or Grid better?
+      const drawBox = document.getElementById("drawBox");
 
+      //wiring events
+      btnJoin.addEventListener("click", (e) => {
+        if (gameId === null) gameId = txtGameId.value;
 
-        //wiring events
-        btnJoin.addEventListener("click", e => {
+        const payLoad = {
+          method: "join",
+          clientId: clientId,
+          gameId: gameId,
+        };
 
-            if (gameId === null)
-                gameId = txtGameId.value;
+        ws.send(JSON.stringify(payLoad));
+      });
 
-            const payLoad = {
-                "method": "join",
-                "clientId": clientId,
-                "gameId": gameId
-            }
+      btnCreate.addEventListener("click", (e) => {
+        const payLoad = {
+          method: "create",
+          clientId: clientId,
+        };
 
-            ws.send(JSON.stringify(payLoad));
+        ws.send(JSON.stringify(payLoad));
+      });
 
-        })
-
-        btnCreate.addEventListener("click", e => {
-
-            const payLoad = {
-                "method": "create",
-                "clientId": clientId
-            }
-
-            ws.send(JSON.stringify(payLoad));
-
-        })
-
-        ws.onmessage = message => {
-            //message.data
-            const response = JSON.parse(message.data);
-            //connect
-            if (response.method === "connect") {
-                clientId = response.clientId;
-                console.log("Client id Set successfully " + clientId)
-            }
-
-            //create
-            if (response.method === "create") {
-                gameId = response.game.id;
-                console.log("game successfully created with id " + response.game.id + " with " + response.game.box + " boxes")
-            }
-
-
-            //update
-            if (response.method === "update") {
-                //{1: "red", 1}
-                if (!response.game.state) return;
-                for (const b of Object.keys(response.game.state)) {
-                    const color = response.game.state[b];
-                    const box = document.getElementById("box" + b);
-                    boxObject.style.backgroundColor = color
-                }
-
-            }
-
-            //join box and UUID 
-            if (response.method === "join") {
-                const game = response.game;
-
-                while (divPlayers.firstChild)
-                    divPlayers.removeChild(divPlayers.firstChild)
-
-                game.clients.forEach(c => {
-
-                    const d = document.createElement("div");
-                    d.style.width = "200px";
-                    d.style.background = c.color
-                    d.textContent = c.clientId;
-                    divPlayers.appendChild(d);
-
-                    if (c.clientId === clientId) playerColor = c.color;
-                })
-                function updateGrid() {
-                    for (let i = 0; i < state.grid.length; i++) {
-                        for (let j = 0; j < state.grid[i].length; j++) {
-                            const box = document.getElementById(`box${i}${j}`);
-                            box.textContent = state.grid[i][j];
-
-                        }
-                    }
-                }
-                //Draw grid for multi and update with state?? Duplicate for working... using drawGrid potentially...
-                while (drawBox.firstChild)
-                    box.removeChild(box.firstChild)
-
-                function drawBox(container, row, col, letter = '') {
-                    const box = document.createElement('div');
-                    box.className = 'box';
-                    box.id = `box${row}${col}`;
-                    box.textContent = letter;
-
-                    container.appendChild(box);
-                    return box;
-
-                }
-
-                //drawgrid
-                function drawGrid(container) {
-                    const grid = document.createElement('div');
-                    grid.className = 'grid';
-
-                    //col row
-                    for (let i = 0; i < 6; i++) {
-                        for (let j = 0; j < 5; j++) {
-                            drawBox(grid, i, j);
-                        }
-                    }
-                    container.appendChild(grid);
-                }
-
-            }
-
+      ws.onmessage = (message) => {
+        //message.data
+        const response = JSON.parse(message.data);
+        //connect
+        if (response.method === "connect") {
+          clientId = response.clientId;
+          console.log("Client id Set successfully " + clientId);
         }
 
+        //create
+        if (response.method === "create") {
+          gameId = response.game.id;
+          console.log(
+            "game successfully created with id " +
+              response.game.id +
+              " with " +
+              response.game.box +
+              " boxes"
+          );
+        }
 
+        //update
+        if (response.method === "update") {
+          //{1: "red", 1}
+          if (!response.game.state) return;
+          for (const b of Object.keys(response.game.state)) {
+            const color = response.game.state[b];
+            const box = document.getElementById("box" + b);
+            boxObject.style.backgroundColor = color;
+          }
+        }
 
+        //join box and UUID
+        if (response.method === "join") {
+          const game = response.game;
+
+          while (divPlayers.firstChild)
+            divPlayers.removeChild(divPlayers.firstChild);
+
+          game.clients.forEach((c) => {
+            const d = document.createElement("div");
+            d.style.width = "200px";
+            d.style.background = c.color;
+            d.textContent = c.clientId;
+            divPlayers.appendChild(d);
+
+            if (c.clientId === clientId) playerColor = c.color;
+          });
+          function updateGrid() {
+            for (let i = 0; i < state.grid.length; i++) {
+              for (let j = 0; j < state.grid[i].length; j++) {
+                const box = document.getElementById(`box${i}${j}`);
+                box.textContent = state.grid[i][j];
+              }
+            }
+          }
+          //Draw grid for multi and update with state?? Duplicate for working... using drawGrid potentially...
+          while (drawBox.firstChild) box.removeChild(box.firstChild);
+
+          function drawBox(container, row, col, letter = "") {
+            const box = document.createElement("div");
+            box.className = "box";
+            box.id = `box${row}${col}`;
+            box.textContent = letter;
+
+            container.appendChild(box);
+            return box;
+          }
+
+          //drawgrid
+          function drawGrid(container) {
+            const grid = document.createElement("div");
+            grid.className = "grid";
+
+            //col row
+            for (let i = 0; i < 6; i++) {
+              for (let j = 0; j < 5; j++) {
+                drawBox(grid, i, j);
+              }
+            }
+            container.appendChild(grid);
+          }
+        }
+      };
     </script>
     <script type="module" src="/app.js"></script>
     <div id="nerdle">
-
-        <h2><br><br><br> Welcome to Nerdle. This is a word guessing game for nerds.</h2>
-        <div class="grid">
-
-            <div class="box right"></div>
-            <div class="box right"></div>
-            <div class="box right"></div>
-            <div class="box right"></div>
-            <div class="box right"></div>
-        </div>
-
+      <h2>
+        <br /><br /><br />
+        Welcome to Nerdle. This is a word guessing game for nerds.
+      </h2>
+      <div class="grid">
+        <div class="box right"></div>
+        <div class="box right"></div>
+        <div class="box right"></div>
+        <div class="box right"></div>
+        <div class="box right"></div>
+      </div>
     </div>
-
-</body>
-
+  </body>
 </html>
